@@ -31,9 +31,10 @@ final class ExerciseQueryService
     }
 
     /**
-     * @return array{exercise:int,count:int,data:array<int, array<string, mixed>>}
+     * @param array{pid?:string,fid?:string,colore?:string,limit?:int,offset?:int} $options
+     * @return array{exercise:int,count:int,data:array<int, array<string, mixed>>,total:int,limit:?int,offset:int}
      */
-    public function run(int $exercise): array
+    public function run(int $exercise, array $options = []): array
     {
         // Valida che l'esercizio richiesto esista nella mappa query.
         if (!isset($this->queries[$exercise])) {
@@ -52,12 +53,62 @@ final class ExerciseQueryService
         // Recupera tutte le righe restituite dalla query.
         $rows = $statement->fetchAll();
 
+        // Filtri applicati ove ha senso: solo se la colonna è presente nel risultato.
+        $rows = $this->applyFilters($rows, $options);
+
+        $total = count($rows);
+
+        // Paginazione opzionale a livello applicativo.
+        $offset = max(0, (int) ($options['offset'] ?? 0));
+        $limit = isset($options['limit']) ? max(1, (int) $options['limit']) : null;
+        if ($limit !== null) {
+            $rows = array_slice($rows, $offset, $limit);
+        } elseif ($offset > 0) {
+            $rows = array_slice($rows, $offset);
+        }
+
         // Restituisce payload API uniforme.
         return [
             'exercise' => $exercise,
             'count' => count($rows),
             'data' => $rows,
+            'total' => $total,
+            'limit' => $limit,
+            'offset' => $offset,
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @param array{pid?:string,fid?:string,colore?:string} $options
+     * @return array<int, array<string, mixed>>
+     */
+    private function applyFilters(array $rows, array $options): array
+    {
+        $filters = [
+            'pid' => $options['pid'] ?? null,
+            'fid' => $options['fid'] ?? null,
+            'colore' => $options['colore'] ?? null,
+        ];
+
+        foreach ($filters as $column => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $rows = array_values(array_filter(
+                $rows,
+                static function (array $row) use ($column, $value): bool {
+                    if (!array_key_exists($column, $row)) {
+                        return true;
+                    }
+
+                    return (string) $row[$column] === (string) $value;
+                }
+            ));
+        }
+
+        return $rows;
     }
 
     /**

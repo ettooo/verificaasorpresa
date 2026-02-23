@@ -88,11 +88,30 @@ $app->get('/', static function (ServerRequestInterface $request, ResponseInterfa
 foreach ($queries as $exercise => $sql) {
     // Ogni route esegue la query associata all'esercizio e ritorna il risultato in JSON.
     $app->get('/' . $exercise, static function (ServerRequestInterface $request, ResponseInterface $response) use ($service, $json, $exercise): ResponseInterface {
-        $payload = $service->run((int) $exercise);
+        $query = $request->getQueryParams();
+        $options = [
+            'pid' => isset($query['pid']) ? (string) $query['pid'] : null,
+            'fid' => isset($query['fid']) ? (string) $query['fid'] : null,
+            'colore' => isset($query['colore']) ? (string) $query['colore'] : null,
+            'limit' => isset($query['limit']) && is_numeric($query['limit']) ? (int) $query['limit'] : null,
+            'offset' => isset($query['offset']) && is_numeric($query['offset']) ? (int) $query['offset'] : 0,
+        ];
+
+        $payload = $service->run((int) $exercise, $options);
 
         return $json($response, [
             'exerciseId' => $payload['exercise'],
             'totalRows' => $payload['count'],
+            'totalBeforePagination' => $payload['total'],
+            'pagination' => [
+                'limit' => $payload['limit'],
+                'offset' => $payload['offset'],
+            ],
+            'filters' => [
+                'pid' => $options['pid'],
+                'fid' => $options['fid'],
+                'colore' => $options['colore'],
+            ],
             'items' => $payload['data'],
         ]);
     });
