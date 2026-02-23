@@ -1,0 +1,1 @@
+{"version":2,"defects":[],"times":{"Tests\\ExerciseQueryServiceTest::testRunReturnsPayloadWithPdoMocks":0.012,"Tests\\ExerciseQueryServiceTest::testRunThrowsExceptionForUnknownExercise":0.001,"Tests\\ExerciseQueryServiceTest::testRunThrowsExceptionWhenQueryFails":0,"Tests\\ExerciseQueryServiceTest::testEndpointsReturnsPathList":0}}
